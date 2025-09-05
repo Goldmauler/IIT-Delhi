@@ -632,4 +632,8 @@ detailsButton: {
   },
   // ...existing styles...
 });
+<<<<<<< HEAD
 export default AdminDashboard;
+=======
+export default AdminDashboard;
+>>>>>>> 07afdab030901c7803e9d55fc0bc5e1c9071ac7e

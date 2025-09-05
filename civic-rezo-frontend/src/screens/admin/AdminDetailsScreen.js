@@ -60,7 +60,11 @@ const AdminDetailsScreen = ({ navigation }) => {
                 <Ionicons name="alert-circle" size={48} color="#d32f2f" />
                 <Text style={styles.errorText}>Unable to load admin details.</Text>
                 <Button mode="contained" style={styles.button} onPress={() => navigation.goBack()}>
+<<<<<<< HEAD
                     <Text style={{color: '#fff'}}>Back to Dashboard</Text>
+=======
+                    Back to Dashboard
+>>>>>>> 07afdab030901c7803e9d55fc0bc5e1c9071ac7e
                 </Button>
             </View>
         );
@@ -72,11 +76,19 @@ const AdminDetailsScreen = ({ navigation }) => {
             accessible
             accessibilityLabel="Admin Details Screen"
             refreshControl={
+<<<<<<< HEAD
                 <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={["#388e3c"]} />
             }
         >
             <View>
                 <LinearGradient colors={["#388e3c", "#81c784"]} style={styles.gradientHeader}>
+=======
+                <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#388e3c']} />
+            }
+        >
+            <View>
+                <LinearGradient colors={['#388e3c', '#81c784']} style={styles.gradientHeader}>
+>>>>>>> 07afdab030901c7803e9d55fc0bc5e1c9071ac7e
                     <View style={styles.header}>
                         <Avatar.Icon size={80} icon="account" style={styles.avatar} />
                         <Text style={styles.title}>{admin.fullName || 'Admin Profile'}</Text>
@@ -105,8 +117,14 @@ const AdminDetailsScreen = ({ navigation }) => {
                     style={styles.button}
                     onPress={() => navigation.goBack()}
                     accessibilityLabel="Go back to dashboard"
+<<<<<<< HEAD
                 >
                     <Text style={{color: '#fff'}}>Back to Dashboard</Text>
+=======
+                    icon="arrow-left"
+                >
+                    Back to Dashboard
+>>>>>>> 07afdab030901c7803e9d55fc0bc5e1c9071ac7e
                 </Button>
             </View>
         </ScrollView>
@@ -114,7 +132,11 @@ const AdminDetailsScreen = ({ navigation }) => {
 };
 
 const DetailRow = ({ label, value }) => (
+<<<<<<< HEAD
     <View style={styles.row} accessible accessibilityLabel={label + ': ' + (value || '-') }>
+=======
+    <View style={styles.row} accessible accessibilityLabel={`${label}: ${value || '-'}`}>
+>>>>>>> 07afdab030901c7803e9d55fc0bc5e1c9071ac7e
         <Text style={styles.label}>{label}</Text>
         <Text style={styles.value}>{value || '-'}</Text>
     </View>
@@ -229,5 +251,9 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
 });
+<<<<<<< HEAD
 
 export default AdminDetailsScreen;
+=======
+export default AdminDetailsScreen;
+>>>>>>> 07afdab030901c7803e9d55fc0bc5e1c9071ac7e
