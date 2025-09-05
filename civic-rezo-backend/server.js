@@ -1,9 +1,24 @@
+// Load environment variables from the project .env (no hardcoded absolute paths)
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const { createClient } = require('@supabase/supabase-js');
+
+// Debug environment variables
+console.log('🔧 Environment Debug:', {
+    ROBOFLOW_API_KEY: process.env.ROBOFLOW_API_KEY ? 'SET' : 'NOT SET',
+    ROBOFLOW_WORKSPACE: process.env.ROBOFLOW_WORKSPACE,
+    ROBOFLOW_WORKFLOW: process.env.ROBOFLOW_WORKFLOW,
+    ROBOFLOW_API_URL: process.env.ROBOFLOW_API_URL,
+    PORT: process.env.PORT
+});
+
+// Ensure JWT secret exists in dev to avoid crashes
+if (!process.env.JWT_SECRET) {
+  process.env.JWT_SECRET = 'dev-secret-change-me';
+}
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -19,7 +34,12 @@ app.set('supabase', supabase);
 
 // Middleware
 app.use(helmet());
-app.use(cors());
+app.use(cors({
+  origin: true, // Allow all origins in development
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(morgan('combined'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -28,6 +48,9 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/complaints', require('./routes/complaints'));
 app.use('/api/admin', require('./routes/admin'));
+app.use('/api/image-analysis', require('./routes/imageAnalysis'));
+app.use('/cloudinary', require('./routes/cloudinary'));
+app.use('/transcribe', require('./routes/transcribe'));
 
 // Health check
 app.get('/health', (req, res) => {
@@ -58,7 +81,7 @@ app.use((err, req, res, next) => {
   res.status(500).json({
     success: false,
     message: 'Something went wrong!',
-    error: process.env.NODE_ENV === 'development' ? err.message : {}
+  error: process.env.NODE_ENV === 'development' ? err.message : {}
   });
 });
 
@@ -73,7 +96,8 @@ app.use('*', (req, res) => {
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 CivicStack Backend Server is running on port ${PORT}`);
   console.log(`📊 Health check: http://localhost:${PORT}/health`);
-  console.log(`📱 Mobile access: http://192.168.29.212:${PORT}/health`);
+  console.log(`📱 Mobile access: http://192.168.29.237:${PORT}/health`);
+  console.log(`📱 API endpoints: http://192.168.29.237:${PORT}/api`);
 });
 
 module.exports = app;
