@@ -5,6 +5,19 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const { createClient } = require('@supabase/supabase-js');
+const path = require('path');
+const fs = require('fs');
+
+// Set Google credentials explicitly for the entire application
+const googleCredentialsPath = path.join(__dirname, 'service-account-key.json');
+process.env.GOOGLE_APPLICATION_CREDENTIALS = googleCredentialsPath;
+
+// Verify the credentials file exists
+if (fs.existsSync(googleCredentialsPath)) {
+  console.log('✅ Google Cloud credentials file found at:', googleCredentialsPath);
+} else {
+  console.error('❌ Google Cloud credentials file NOT FOUND at:', googleCredentialsPath);
+}
 
 // Debug environment variables
 console.log('🔧 Environment Debug:', {
@@ -12,7 +25,8 @@ console.log('🔧 Environment Debug:', {
     ROBOFLOW_WORKSPACE: process.env.ROBOFLOW_WORKSPACE,
     ROBOFLOW_WORKFLOW: process.env.ROBOFLOW_WORKFLOW,
     ROBOFLOW_API_URL: process.env.ROBOFLOW_API_URL,
-    PORT: process.env.PORT
+    PORT: process.env.PORT,
+    GOOGLE_APPLICATION_CREDENTIALS: process.env.GOOGLE_APPLICATION_CREDENTIALS
 });
 
 // Ensure JWT secret exists in dev to avoid crashes

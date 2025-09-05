@@ -3,8 +3,6 @@
 # dependencies
 node_modules/
 
-service-account-key.json
-
 # Expo
 .expo/
 dist/

@@ -3,28 +3,23 @@ const express = require('express');
 const multer = require('multer');
 const axios = require('axios');
 const fs = require('fs');
+const path = require('path');
 const ffmpeg = require('fluent-ffmpeg');
 const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg');
 const { SpeechClient } = require('@google-cloud/speech');
-const path = require('path');
 const router = express.Router();
-const dotenv = require('dotenv');
-
-// Load environment variables
-dotenv.config();
 
 const upload = multer({ dest: 'uploads/audio/' });
+// Set Google credentials explicitly - use the environment variable from server.js
+console.log('Using Google Cloud credentials from:', process.env.GOOGLE_APPLICATION_CREDENTIALS);
 
-// Create client with credentials from environment variables
-const speechClient = new SpeechClient({
-  credentials: {
-    client_email: process.env.GOOGLE_CLIENT_EMAIL,
-    private_key: process.env.GOOGLE_PRIVATE_KEY
-  },
-  projectId: process.env.GOOGLE_PROJECT_ID
-});
+// Verify file exists
+if (!fs.existsSync(process.env.GOOGLE_APPLICATION_CREDENTIALS)) {
+  console.error('ERROR: Google Cloud credentials file not found at:', process.env.GOOGLE_APPLICATION_CREDENTIALS);
+}
 
-console.log('Using credentials for project:', process.env.GOOGLE_PROJECT_ID);
+// Initialize the Speech client with default credentials (will use env variable)
+const speechClient = new SpeechClient();
 
 // POST /transcribe/audio
 router.post('/audio', upload.single('audio'), async (req, res) => {
@@ -60,8 +55,12 @@ router.post('/audio', upload.single('audio'), async (req, res) => {
         },
       });
       googleResponse = response;
+      console.log('Google STT response:', JSON.stringify(response));
       if (response.results && response.results.length > 0) {
         originalText = response.results.map(r => r.alternatives[0].transcript).join(' ');
+        console.log('Transcribed text:', originalText);
+      } else {
+        console.log('No transcription results from Google STT');
       }
     } catch (err) {
       googleResponse = err;
