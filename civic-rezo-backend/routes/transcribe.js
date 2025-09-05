@@ -6,10 +6,24 @@ const fs = require('fs');
 const ffmpeg = require('fluent-ffmpeg');
 const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg');
 const { SpeechClient } = require('@google-cloud/speech');
+const path = require('path');
 const router = express.Router();
 
 const upload = multer({ dest: 'uploads/audio/' });
-const speechClient = new SpeechClient();
+
+// Load and parse the credentials file directly
+const keyFilePath = path.resolve(__dirname, '../service-account-key.json');
+const credentials = JSON.parse(fs.readFileSync(keyFilePath, 'utf8'));
+console.log('Using credentials for project:', credentials.project_id);
+
+// Create client with explicit credentials
+const speechClient = new SpeechClient({
+  credentials: {
+    client_email: credentials.client_email,
+    private_key: credentials.private_key
+  },
+  projectId: credentials.project_id
+});
 
 // POST /transcribe/audio
 router.post('/audio', upload.single('audio'), async (req, res) => {
