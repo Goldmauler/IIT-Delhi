@@ -17,8 +17,10 @@ import * as ImagePicker from 'expo-image-picker';
 import { API_BASE_URL } from '../../../config/supabase';
 import { supabase } from '../../../config/supabase';
 
+
+
 const SubmitComplaintScreen = ({ navigation }) => {
-  const [selectedLang, setSelectedLang] = useState('en');
+  const [selectedLang, setSelectedLang] = useState('hi');
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -61,17 +63,21 @@ const SubmitComplaintScreen = ({ navigation }) => {
         const uri = recording.getURI();
         setIsRecording(false);
         setRecording(null);
-        // Ask user for language (or use a dropdown/select in UI)
-        // For demo, default to 'en'. Replace with your UI logic.
-        const selectedLang = 'en'; // e.g. 'hi', 'te', etc.
+        
+        console.log('Selected language for transcription:', selectedLang);
+        
         const formData = new FormData();
         formData.append('audio', {
           uri,
           type: 'audio/x-wav',
           name: 'voice.wav',
         });
-        formData.append('lang', selectedLang);
-  console.log('Selected language after recording:', selectedLang);
+        formData.append('language', selectedLang);
+        
+        // Show loading indicator
+        setLoading(true);
+        
+        // Use the correct URL structure to match backend routing
         const response = await fetch(`${API_BASE_URL}/transcribe/audio`, {
           method: 'POST',
           headers: {
@@ -79,23 +85,23 @@ const SubmitComplaintScreen = ({ navigation }) => {
           },
           body: formData,
         });
+        
         const result = await response.json();
-        console.log('Transcription response:', result);
-        console.log('originalText:', result.originalText);
-        console.log('translatedText:', result.translatedText);
-        console.log('googleResponse:', result.googleResponse);
-        if (result.success && (result.originalText || result.translatedText)) {
-          setFormData(prev => ({ ...prev, description: result.originalText }));
-          if (result.translatedText && result.translatedText !== result.originalText) {
-            Alert.alert('English Translation', result.translatedText);
-          }
+        console.log('Sarvam AI transcription response:', result);
+        
+        if (result.success && result.transcription) {
+          setFormData(prev => ({ ...prev, description: result.transcription }));
+          Alert.alert('Transcription Successful', 'Your speech has been converted to text.');
         } else {
           Alert.alert('Transcription Error', result.message || 'Could not transcribe audio.');
         }
       }
     } catch (err) {
+      console.error('Speech-to-text error:', err);
       setVoiceError(err.message);
-      Alert.alert('Error', 'Speech-to-text failed.');
+      Alert.alert('Error', 'Speech-to-text failed. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -366,19 +372,23 @@ const SubmitComplaintScreen = ({ navigation }) => {
           onChangeText={(text) => setFormData(prev => ({ ...prev, title: text }))}
         />
 
-        {/* Language Picker for Speech-to-Text */}
-        <Text style={{ fontWeight: 'bold', marginBottom: 4 }}>Select Spoken Language:</Text>
+        {/* Language Picker for Sarvam AI Speech-to-Text */}
+        <Text style={{ fontWeight: 'bold', marginBottom: 4 }}>Select Language for Voice Input:</Text>
         <Picker
           selectedValue={selectedLang}
           onValueChange={setSelectedLang}
           style={{ backgroundColor: '#f0f0f0', borderRadius: 8, marginBottom: 12 }}
         >
-          <Picker.Item label="English" value="en-US" />
-          <Picker.Item label="Hindi" value="hi-IN" />
-          <Picker.Item label="Telugu" value="te-IN" />
-          <Picker.Item label="Tamil" value="ta-IN" />
-          <Picker.Item label="Kannada" value="kn-IN" />
-          <Picker.Item label="Urdu" value="ur-IN" />
+          <Picker.Item label="Hindi" value="hi" />
+          <Picker.Item label="English" value="en" />
+          <Picker.Item label="Telugu" value="te" />
+          <Picker.Item label="Tamil" value="ta" />
+          <Picker.Item label="Kannada" value="kn" />
+          <Picker.Item label="Marathi" value="mr" />
+          <Picker.Item label="Bengali" value="bn" />
+          <Picker.Item label="Gujarati" value="gu" />
+          <Picker.Item label="Malayalam" value="ml" />
+          <Picker.Item label="Punjabi" value="pa" />
         </Picker>
 
         <Text style={styles.label}>Description *</Text>
@@ -391,10 +401,22 @@ const SubmitComplaintScreen = ({ navigation }) => {
             multiline
             numberOfLines={4}
           />
-          <TouchableOpacity onPress={isRecording ? stopVoiceInput : startVoiceInput} style={{ marginLeft: 10 }}>
-            <Ionicons name={isRecording ? 'mic' : 'mic-outline'} size={28} color={isRecording ? '#2E7D32' : '#666'} />
+          <TouchableOpacity 
+            onPress={isRecording ? stopVoiceInput : startVoiceInput} 
+            style={{ marginLeft: 10 }}
+            disabled={loading}
+          >
+            <Ionicons 
+              name={isRecording ? 'mic' : 'mic-outline'} 
+              size={28} 
+              color={isRecording ? '#2E7D32' : loading ? '#ccc' : '#666'} 
+            />
+            {isRecording && <Text style={{fontSize: 10, color: '#2E7D32', textAlign: 'center'}}>Recording</Text>}
           </TouchableOpacity>
         </View>
+        {voiceError && (
+          <Text style={styles.errorText}>Error: {voiceError}</Text>
+        )}
 
         <Text style={styles.label}>Location</Text>
         <TextInput
@@ -575,6 +597,11 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  errorText: {
+    color: '#F44336',
+    fontSize: 14,
+    marginTop: 5,
   },
 });
 

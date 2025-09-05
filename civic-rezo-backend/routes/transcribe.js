@@ -1,96 +1,77 @@
-
 const express = require('express');
+const router = express.Router();
 const multer = require('multer');
 const axios = require('axios');
+const FormData = require('form-data');
 const fs = require('fs');
-const path = require('path');
-const ffmpeg = require('fluent-ffmpeg');
-const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg');
-const { SpeechClient } = require('@google-cloud/speech');
-const router = express.Router();
+require('dotenv').config();
 
-const upload = multer({ dest: 'uploads/audio/' });
-// Set Google credentials explicitly - use the environment variable from server.js
-console.log('Using Google Cloud credentials from:', process.env.GOOGLE_APPLICATION_CREDENTIALS);
+// Configure storage for audio files
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'uploads/');
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + '-' + file.originalname);
+  }
+});
 
-// Verify file exists
-if (!fs.existsSync(process.env.GOOGLE_APPLICATION_CREDENTIALS)) {
-  console.error('ERROR: Google Cloud credentials file not found at:', process.env.GOOGLE_APPLICATION_CREDENTIALS);
+const upload = multer({ storage: storage });
+
+// Create uploads directory if it doesn't exist
+if (!fs.existsSync('uploads/')) {
+  fs.mkdirSync('uploads/');
 }
 
-// Initialize the Speech client with default credentials (will use env variable)
-const speechClient = new SpeechClient();
-
-// POST /transcribe/audio
+// Endpoint to transcribe audio
 router.post('/audio', upload.single('audio'), async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ success: false, message: 'No audio file uploaded.' });
+      return res.status(400).json({ success: false, message: 'No audio file uploaded' });
     }
-    const lang = req.body.lang || 'en-US';
-    const audioPath = req.file.path;
-    const wavPath = audioPath + '.wav';
-    ffmpeg.setFfmpegPath(ffmpegInstaller.path);
-    await new Promise((resolve, reject) => {
-      ffmpeg(audioPath)
-        .audioChannels(1)
-        .audioFrequency(16000)
-        .format('wav')
-        .on('end', resolve)
-        .on('error', reject)
-        .save(wavPath);
+
+    // Get language preference from request (default to 'hi' for Hindi)
+    const language = req.body.language || 'hi';
+    console.log(`Transcribing audio in language: ${language}`);
+    
+    // Path to the uploaded audio file
+    const audioFilePath = req.file.path;
+    
+    // Create form data for Sarvam API
+    const formData = new FormData();
+    formData.append('audio_file', fs.createReadStream(audioFilePath));
+    formData.append('language', language);
+    
+    // Make request to Sarvam AI API
+    const response = await axios.post(
+      'https://api.sarvam.ai/v1/speech/recognize',
+      formData,
+      {
+        headers: {
+          ...formData.getHeaders(),
+          'Authorization': `Bearer ${process.env.SARVAM_API_KEY}`
+        }
+      }
+    );
+    
+    // Clean up the uploaded file
+    fs.unlinkSync(audioFilePath);
+    
+    // Return transcription result
+    return res.json({
+      success: true,
+      transcription: response.data.text || '',
+      language: language
     });
-    // Read audio file
-    const file = fs.readFileSync(wavPath);
-    const audioBytes = file.toString('base64');
-    let originalText = '';
-    let googleResponse = null;
-    try {
-      const [response] = await speechClient.recognize({
-        audio: { content: audioBytes },
-        config: {
-          encoding: 'LINEAR16',
-          sampleRateHertz: 16000,
-          languageCode: lang,
-        },
-      });
-      googleResponse = response;
-      console.log('Google STT response:', JSON.stringify(response));
-      if (response.results && response.results.length > 0) {
-        originalText = response.results.map(r => r.alternatives[0].transcript).join(' ');
-        console.log('Transcribed text:', originalText);
-      } else {
-        console.log('No transcription results from Google STT');
-      }
-    } catch (err) {
-      googleResponse = err;
-      console.error('Google STT error:', err);
-      originalText = '';
-    }
-    fs.unlinkSync(audioPath);
-    fs.unlinkSync(wavPath);
-    // Translate to English using LibreTranslate
-    let translatedText = '';
-    if (originalText) {
-      try {
-        const ltRes = await axios.post('https://libretranslate.de/translate', {
-          q: originalText,
-          source: lang.split('-')[0],
-          target: 'en',
-          format: 'text'
-        }, { headers: { 'accept': 'application/json' } });
-        translatedText = ltRes.data.translatedText;
-      } catch (err) {
-        translatedText = '';
-      }
-    }
-    if (!originalText) {
-      return res.status(500).json({ success: false, message: 'Google STT transcription failed', error: googleResponse });
-    }
-    return res.json({ success: true, originalText, translatedText, lang, googleResponse });
-  } catch (err) {
-    console.error('Transcription error:', err);
-    return res.status(500).json({ success: false, message: 'Transcription failed', error: err.stack || err.message || String(err) });
+    
+  } catch (error) {
+    console.error('Sarvam AI transcription error:', error);
+    
+    return res.status(500).json({
+      success: false,
+      message: 'Transcription failed',
+      error: error.response?.data || error.message
+    });
   }
 });
 
